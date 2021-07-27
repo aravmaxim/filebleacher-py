@@ -8,19 +8,28 @@ BMP_MAGIC_NUMBERS = {
     'PT': 'OS/2 pointer'
 }
 
+BITMAPCOREHEADER_SIZE = 12
+BITMAPCOREHEADER2_SIZE = 64
+OS22XBITMAPHEADER_SIZE = 16
+BITMAPINFOHEADER_SIZE = 40
+BITMAPV2INFOHEADER_SIZE = 52
+BITMAPV3INFOHEADER_SIZE = 56
+BITMAPV4HEADER_SIZE = 108
+BITMAPV5HEADER_SIZE = 124
+
 DIB_HEADER_TYPES = {
-  12 : 'BITMAPCOREHEADER',
-  64 : 'OS22XBITMAPHEADER',
-  16 : 'OS22XBITMAPHEADER',
-  40 : 'BITMAPINFOHEADER',
-  52 : 'BITMAPV2INFOHEADER',
-  56 : 'BITMAPV3INFOHEADER',
-  108 : 'BITMAPV4HEADER',
-  124 : 'BITMAPV5HEADER'
+  BITMAPCOREHEADER_SIZE : 'BITMAPCOREHEADER',
+  BITMAPCOREHEADER2_SIZE : 'BITMAPCOREHEADER2',
+  OS22XBITMAPHEADER_SIZE : 'OS22XBITMAPHEADER',
+  BITMAPINFOHEADER_SIZE : 'BITMAPINFOHEADER',
+  BITMAPV2INFOHEADER_SIZE : 'BITMAPV2INFOHEADER',
+  BITMAPV3INFOHEADER_SIZE : 'BITMAPV3INFOHEADER',
+  BITMAPV4HEADER_SIZE : 'BITMAPV4HEADER',
+  BITMAPV5HEADER_SIZE : 'BITMAPV5HEADER'
 }
 
-def __read_bmp_header(data) -> dict:
-  header_data = data[:BMP_HEADER_SIZE]
+def __read_bmp_header(data : bytes) -> dict:
+  header_data : bytes = data[:BMP_HEADER_SIZE]
   bmpHeader = { 
     'magic_number' : (header_data[:2]).decode("ascii") ,
     'bmp_size' : int.from_bytes(header_data[2:6], byteorder='little', signed=False),
@@ -49,10 +58,10 @@ def __check_bmp_header(data : bytes, bmpHeader : dict) -> bool:
 
   return True
 
-def __read_dib_header(data) -> dict:
+def __read_dib_header(data : bytes) -> dict:
   if (len(data) < BMP_HEADER_SIZE + 4):
     return None
-
+  
   dib_size = int.from_bytes(data[BMP_HEADER_SIZE:BMP_HEADER_SIZE + 4], byteorder='little', signed=False)
 
   if dib_size not in DIB_HEADER_TYPES:
@@ -68,7 +77,7 @@ def __read_dib_header(data) -> dict:
   
   return None
 
-def __read_BITMAPINFOHEADER(data) -> dict:
+def __read_BITMAPINFOHEADER(data : bytes) -> dict:
   header = {
     'type' : 'BITMAPINFOHEADER',
     'width' : int.from_bytes(data[4:8], byteorder='little', signed=False),
@@ -85,17 +94,32 @@ def __read_BITMAPINFOHEADER(data) -> dict:
 
   return header
 
-def __check_dib_header(data, dib_header) -> bool:
+def __check_dib_header(data : bytes, dib_header : dict) -> bool:
   if dib_header['type'] == 'BITMAPINFOHEADER':
     return __check_BITMAPINFOHEADER(data, dib_header)
   
   return False
 
-def __check_BITMAPINFOHEADER(data, dib_header) -> bool:
+def __check_BITMAPINFOHEADER(data : bytes, dib_header : dict) -> bool:
   # TODO : implament
+  
+  return True
+
+def __check_data(data : bytes, bmp_header : dict, dib_header : dict) -> bool:
+  # TODO : implament
+  
   return True
 
 def check_bmp(data : bytes, opts: dict) -> bool:
+  """Checks given bitmap file data for format coplince
+
+  Parameters:
+  data (bytes): bitmap file data
+  opts (dict): dictionary contains configuration
+
+  Returns:
+  bool: If true file format is ok, else false
+  """
   # Check minmum size for BMP header
   if (len(data) < BMP_HEADER_SIZE):
     return False
@@ -103,16 +127,23 @@ def check_bmp(data : bytes, opts: dict) -> bool:
   # Read bmp header
   bmpHeader = __read_bmp_header(data)
 
+  # Check bmp header
   if(not __check_bmp_header(data, bmpHeader)):
     return False
 
+  # Reads dib header
   dib_header = __read_dib_header(data)
 
+  # Check if readed dib header
   if dib_header == None:
     return False
 
+  # Checks dib header
   if not __check_dib_header(data, dib_header):
     return False
 
-  # TODO : Check data
+  # Check data
+  if not __check_data(data, bmpHeader, dib_header):
+    return False
+
   return True
